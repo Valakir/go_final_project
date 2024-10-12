@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Valakir/go-sprint-12-final/database"
+	"github.com/Valakir/go_final_project/database"
 )
 
 func main() {
