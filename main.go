@@ -1,15 +1,13 @@
 package main
 
 import (
+	"github.com/Valakir/go_final_project.git/database"
 	"log"
 	"net/http"
 	"os"
-
-	"go_final_project/database"
 )
 
-func main() {
-	// Инициализация БД
+func initDB() {
 	db, err := database.SetupDatabase()
 	if err != nil {
 		log.Fatalf("failed to set up database: %v", err)
@@ -20,7 +18,12 @@ func main() {
 		}
 	}()
 	log.Println("Database setup successfully")
+}
 
+func main() {
+
+	// Инициализация БД
+	initDB()
 	// Установим директорию, откуда будут раздаваться файлы
 	webDir := "./web"
 	// Создание обработчика файлового сервера
