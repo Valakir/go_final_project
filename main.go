@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/Valakir/go_final_project.git/database"
 	"log"
 	"net/http"
 	"os"
+
+	"go_final_project/database"
 )
 
 func initDB() {

@@ -1,4 +1,4 @@
-module github.com/Valakir/go_final_project.git
+module go_final_project
 
 go 1.22.0
 
