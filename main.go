@@ -5,16 +5,21 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Valakir/go_final_project/database"
+	"go_final_project/database"
 )
 
 func main() {
 	// Инициализация БД
 	db, err := database.SetupDatabase()
 	if err != nil {
-		log.Fatalf("Ошибка настройки БД: %v", err)
+		log.Fatalf("failed to set up database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
+	log.Println("Database setup successfully")
 
 	// Установим директорию, откуда будут раздаваться файлы
 	webDir := "./web"
