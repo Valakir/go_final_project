@@ -1,6 +1,7 @@
 package main
 
 import (
+	"go_final_project/dates"
 	"log"
 	"net/http"
 	"os"
@@ -11,14 +12,14 @@ import (
 func initDB() {
 	db, err := database.SetupDatabase()
 	if err != nil {
-		log.Fatalf("failed to set up database: %v", err)
+		log.Fatalf("ошибка при подключении к БД: %v", err)
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Printf("Error closing database: %v", err)
+			log.Printf("ошибка при закрытии БД: %v", err)
 		}
 	}()
-	log.Println("Database setup successfully")
+	log.Println("БД подключена")
 }
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
 	fileServer := http.FileServer(http.Dir(webDir))
 	// Определение пути для файлового сервера
 	http.Handle("/", fileServer)
+	http.HandleFunc("/api/nextdate", dates.ApiNextDateHandler)
 
 	// Получение порта из переменной окружения TODO_PORT или использование дефолтного
 	port := os.Getenv("TODO_PORT")
