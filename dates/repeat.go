@@ -9,12 +9,10 @@ import (
 	"time"
 )
 
-const dateFormat = "20060102"
-
 // NextDate вычисляет следующую дату выполнения задачи
 func NextDate(now time.Time, date string, repeat string) (string, error) {
 	// Разбираем исходную дату
-	originalDate, err := time.Parse(dateFormat, date)
+	originalDate, err := time.Parse(DateFormat, date)
 	if err != nil {
 		return "", fmt.Errorf("неправильный формат даты: %w", err)
 	}
@@ -40,7 +38,7 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 		// Использование AddDate с добавлением days
 		for nextDate := originalDate.AddDate(0, 0, days); ; nextDate = nextDate.AddDate(0, 0, days) {
 			if nextDate.After(now) {
-				return nextDate.Format(dateFormat), nil
+				return nextDate.Format(DateFormat), nil
 			}
 		}
 
@@ -50,7 +48,7 @@ func NextDate(now time.Time, date string, repeat string) (string, error) {
 				if nextDate.Month() == time.February && nextDate.Day() == 29 && !isLeapYear(nextDate.Year()) {
 					nextDate = nextDate.AddDate(0, 0, 1) // Переход на 1 марта, если не високосный год
 				}
-				return nextDate.Format(dateFormat), nil
+				return nextDate.Format(DateFormat), nil
 			}
 		}
 
@@ -70,7 +68,7 @@ func ApiNextDateHandler(w http.ResponseWriter, r *http.Request) {
 	dateStr := r.FormValue("date")
 	repeat := r.FormValue("repeat")
 
-	now, err := time.Parse(dateFormat, nowStr)
+	now, err := time.Parse(DateFormat, nowStr)
 	if err != nil {
 		http.Error(w, "неправильный формат now", http.StatusBadRequest)
 		return
@@ -81,6 +79,5 @@ func ApiNextDateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	fmt.Fprintln(w, nextDate)
 }
