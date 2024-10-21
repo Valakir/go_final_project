@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -11,7 +10,8 @@ import (
 	"go_final_project/auth"
 	"go_final_project/database"
 	"go_final_project/dates"
-	"go_final_project/tasks"
+	"go_final_project/handlers"
+	"go_final_project/models"
 )
 
 // main это точка входа в приложение.
@@ -46,10 +46,10 @@ func main() {
 		port = "7540"
 	}
 
-	// Загрузка переменных окружения из .env файла
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Ошибка загрузки .env файла: %v", err)
-	}
+	//// Загрузка переменных окружения из .env файла
+	//if err := godotenv.Load(); err != nil {
+	//	log.Fatalf("Ошибка загрузки .env файла: %v", err)
+	//}
 
 	// Запуск сервера и прослушивание порта
 	log.Printf("Сервер запущен на порту %s\n", port)
@@ -66,12 +66,12 @@ type TaskHandler struct {
 
 // GetTasksHandler обрабатывает HTTP-запросы для получения списка задач.
 func (h *TaskHandler) GetTasksHandler(w http.ResponseWriter, r *http.Request) {
-	tasks.GetTasksHandler(w, r, h.db)
+	handlers.GetTasksHandler(w, r, h.db)
 }
 
 // DoneTaskHandler обрабатывает HTTP-запросы для отметки задачи как завершенной.
 func (h *TaskHandler) DoneTaskHandler(w http.ResponseWriter, r *http.Request) {
-	tasks.DoneTaskHandler(w, r, h.db)
+	handlers.DoneTaskHandler(w, r, h.db)
 }
 
 // SignInHandler обрабатывает HTTP-запросы для входа в систему.
@@ -84,10 +84,10 @@ func (h *TaskHandler) SignInHandler(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) RouteTaskMethods(w http.ResponseWriter, r *http.Request) {
 	// Карта методов HTTP и соответствующих обработчиков
 	methods := map[string]func(http.ResponseWriter, *http.Request){
-		http.MethodPost:   func(w http.ResponseWriter, r *http.Request) { tasks.AddTaskHandler(w, r, h.db) },
-		http.MethodGet:    func(w http.ResponseWriter, r *http.Request) { tasks.GetTaskHandler(w, r, h.db) },
-		http.MethodPut:    func(w http.ResponseWriter, r *http.Request) { tasks.UpdateTaskHandler(w, r, h.db) },
-		http.MethodDelete: func(w http.ResponseWriter, r *http.Request) { tasks.DeleteTaskHandler(w, r, h.db) },
+		http.MethodPost:   func(w http.ResponseWriter, r *http.Request) { handlers.AddTaskHandler(w, r, h.db) },
+		http.MethodGet:    func(w http.ResponseWriter, r *http.Request) { handlers.GetTaskHandler(w, r, h.db) },
+		http.MethodPut:    func(w http.ResponseWriter, r *http.Request) { handlers.UpdateTaskHandler(w, r, h.db) },
+		http.MethodDelete: func(w http.ResponseWriter, r *http.Request) { handlers.DeleteTaskHandler(w, r, h.db) },
 	}
 
 	// Выбор и вызов обработчика на основе HTTP-метода
@@ -95,6 +95,6 @@ func (h *TaskHandler) RouteTaskMethods(w http.ResponseWriter, r *http.Request) {
 		handlerFunc(w, r)
 	} else {
 		// Ответ с ошибкой 405, если метод не поддерживается
-		tasks.RespondWithError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
+		models.RespondWithError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
 	}
 }

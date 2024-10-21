@@ -1,4 +1,4 @@
-package tasks
+package models
 
 import (
 	"encoding/json"
@@ -27,4 +27,24 @@ func RespondWithError(w http.ResponseWriter, code int, message string) {
 func RespondWithSuccess(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(JSONResponse{})
+}
+
+
+// GetTaskIDFromRequest получает идентификатор задачи из параметров запроса.
+func GetTaskIDFromRequest(w http.ResponseWriter, r *http.Request) (string, bool) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		RespondWithError(w, http.StatusBadRequest, "Не указан идентификатор")
+		return "", false
+	}
+	return id, true
+}
+
+// ValidateHTTPMethod проверяет, соответствует ли метод запроса ожидаемому.
+func ValidateHTTPMethod(w http.ResponseWriter, r *http.Request, expectedMethod string) bool {
+	if r.Method != expectedMethod {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
+		return false
+	}
+	return true
 }

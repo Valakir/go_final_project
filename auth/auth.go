@@ -22,6 +22,8 @@ type AuthResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
+var password = os.Getenv("TODO_PASSWORD")
+
 // SignInHandler Обработчик для входа в систему возвращающий JWT токен
 func SignInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -32,8 +34,6 @@ func SignInHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(AuthResponse{Error: "Некорректный запрос"})
 		return
 	}
-
-	password := os.Getenv("TODO_PASSWORD")
 
 	// Хэш представлен в удобочитаемой строке для сравнения
 	hashedPassword := ComputeHash(password)
@@ -87,7 +87,6 @@ func createJWT(hash string) (string, error) {
 // Аутентификация пользователя с помощью JWT
 func AuthUser(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		password := os.Getenv("TODO_PASSWORD")
 		if password == "" {
 
 			http.Error(w, "Требуется аутентификация", http.StatusUnauthorized)
