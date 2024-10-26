@@ -4,13 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt"
 )
 
 type LoginRequest struct {
@@ -22,59 +22,17 @@ type AuthResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
-var password = os.Getenv("TODO_PASSWORD")
-
-// SignInHandler Обработчик для входа в систему возвращающий JWT токен
-func SignInHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	var loginReq LoginRequest
-	err := json.NewDecoder(r.Body).Decode(&loginReq)
-	if err != nil {
-		json.NewEncoder(w).Encode(AuthResponse{Error: "Некорректный запрос"})
-		return
-	}
-
-	// Хэш представлен в удобочитаемой строке для сравнения
-	hashedPassword := ComputeHash(password)
-	log.Printf("Хэш пароля из переменной окружения: %s", hashedPassword)
-
-	// Проверка введенного пароля
-	if ComputeHash(loginReq.Password) != hashedPassword {
-		json.NewEncoder(w).Encode(AuthResponse{Error: "Неверный пароль"})
-		return
-	}
-
-	// Генерация JWT токена с хэшем пароля
-	token, err := createJWT(hashedPassword)
-	if err != nil {
-		log.Printf("Ошибка создания токена: %v", err)
-		json.NewEncoder(w).Encode(AuthResponse{Error: "Ошибка создания токена"})
-		return
-	}
-
-	// Установка куки
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		Expires:  time.Now().Add(8 * time.Hour),
-		Path:     "/",
-		HttpOnly: true,
-	})
-	log.Printf("Установлена кука %v", token)
-	json.NewEncoder(w).Encode(AuthResponse{Token: token})
-}
+var passwordENV = os.Getenv("TODO_PASSWORD")
 
 // Создание SHA-256 хэша от строки
 func ComputeHash(input string) string {
-	hash := sha256.New()
-	hash.Write([]byte(input))
-	return hex.EncodeToString(hash.Sum(nil))
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])
 }
 
 // Создание JWT токена
 func createJWT(hash string) (string, error) {
-	secretKey := []byte(os.Getenv("TODO_PASSWORD"))
+	secretKey := []byte(passwordENV)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"hash": hash,
@@ -84,47 +42,98 @@ func createJWT(hash string) (string, error) {
 	return token.SignedString(secretKey)
 }
 
-// Аутентификация пользователя с помощью JWT
+// SignInHandler обработчик для входа в систему, возвращающий JWT токен
+func SignInHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Проверяем, что запрос является POST-запросом
+	if r.Method != "POST" {
+		http.Error(w, "Метод запроса не POST", http.StatusMethodNotAllowed)
+		return
+	}
+	var loginReq LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
+		http.Error(w, "Некорректный запрос", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что пароль не пустой
+	if loginReq.Password == "" {
+		http.Error(w, "Пароль не может быть пустым", http.StatusBadRequest)
+		return
+	}
+	var passwordENV = os.Getenv("TODO_PASSWORD")
+	// Проверяем, что переменная окружения для пароля не пустая
+	if passwordENV == "" {
+		http.Error(w, "Ошибка сервера: недоступен пароль для проверки", http.StatusInternalServerError)
+		return
+	}
+
+	// Сравниваем хэши
+	if ComputeHash(loginReq.Password) != ComputeHash(passwordENV) {
+		http.Error(w, "Неверный пароль", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := createJWT(ComputeHash(loginReq.Password))
+	if err != nil {
+		http.Error(w, "Ошибка создания токена", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  time.Now().Add(8 * time.Hour),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	json.NewEncoder(w).Encode(AuthResponse{Token: token})
+}
+
+// AuthUser аутентификация пользователя с помощью JWT
 func AuthUser(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if password == "" {
 
-			http.Error(w, "Требуется аутентификация", http.StatusUnauthorized)
+		if passwordENV == "" {
+			next(w, r)
 			return
 		}
-		// Получение куки
+
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			log.Printf("Ошибка получения куки: %v", err)
 			http.Error(w, "Требуется аутентификация", http.StatusUnauthorized)
 			return
 		}
 
 		tokenStr := cookie.Value
-		secretKey := []byte(password)
+		secretKey := []byte(passwordENV)
 
-		// Парсинг токена
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("неверный метод подписи токена")
+				return nil, http.ErrAbortHandler
 			}
 			return secretKey, nil
 		})
-		// Проверка токена
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			currentHash := ComputeHash(password)
-			tokenHash, ok := claims["hash"].(string)
-			log.Printf("Текущий хэш: %s, Хэш в токене: %s", currentHash, tokenHash)
-			log.Printf("Пароль: %s", password)        // Log the password
-			log.Printf("Хэш пароля: %s", currentHash) // Log the hash of the password
+		if err != nil || !token.Valid {
+			http.Error(w, "Требуется аутентификация", http.StatusUnauthorized)
+			return
+		}
 
-			if !ok || tokenHash != currentHash {
-				log.Print("Хэш пароля не совпадает")
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			currentHash := ComputeHash(passwordENV)
+			if tokenHash, ok := claims["hash"].(string); !ok || tokenHash != currentHash {
 				http.Error(w, "Требуется аутентификация", http.StatusUnauthorized)
 				return
 			}
 		} else {
-			log.Printf("Ошибка проверки токена: %v", err)
 			http.Error(w, "Требуется аутентификация", http.StatusUnauthorized)
 			return
 		}

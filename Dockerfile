@@ -37,7 +37,7 @@ COPY ./web ./web
 # Определение переменных окружения, используемых приложением
 ENV TODO_PORT=7540
 ENV TODO_DBFILE=scheduler.db
-ENV TODO_PASSWORD=1234
+ENV TODO_PASSWORD=12345
 
 # Порт, на котором будет работать приложение
 EXPOSE ${TODO_PORT}

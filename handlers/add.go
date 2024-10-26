@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"go_final_project/dates"
 	"net/http"
 	"strings"
 	"time"
 
+	"go_final_project/dates"
 	"go_final_project/models"
 )
 
@@ -17,10 +17,9 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	// Проверка метода
-	if !models.ValidateHTTPMethod(w, r, http.MethodGet) {
+	if !models.ValidateHTTPMethod(w, r, http.MethodPost) {
 		return
 	}
-
 
 	// Парсим JSON
 	var task models.Task

@@ -35,10 +35,10 @@ func main() {
 
 	// Создание обработчика задач
 	taskHandler := &TaskHandler{db: db}
-	http.HandleFunc("/api/tasks", taskHandler.GetTasksHandler)
+	http.HandleFunc("/api/tasks", auth.AuthUser(taskHandler.GetTasksHandler))
 	http.HandleFunc("/api/task/done", taskHandler.DoneTaskHandler)
-	http.HandleFunc("/api/task", taskHandler.RouteTaskMethods)
-	http.HandleFunc("/api/signin", auth.AuthUser(taskHandler.SignInHandler))
+	http.HandleFunc("/api/task", auth.AuthUser(taskHandler.RouteTaskMethods))
+	http.HandleFunc("/api/signin", auth.AuthUser(auth.SignInHandler))
 
 	// Получение порта из переменной окружения TODO_PORT или значение по умолчанию
 	port := os.Getenv("TODO_PORT")
@@ -46,7 +46,7 @@ func main() {
 		port = "7540"
 	}
 
-	//// Загрузка переменных окружения из .env файла
+	// Загрузка переменных окружения из .env файла
 	//if err := godotenv.Load(); err != nil {
 	//	log.Fatalf("Ошибка загрузки .env файла: %v", err)
 	//}
